@@ -1,0 +1,391 @@
+
+<html>
+  <head>
+    <title>Sudoku Solver</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+	<style type="text/css">
+		table {
+		  margin:1em auto;
+		  border-collapse: collapse;
+		}
+		td {
+		  height:50px;
+		  width:50px;
+		  border:1px solid;
+		  border-color:black;
+		  text-align:center;
+		  font-size: 30px;
+		}
+		td:first-child {
+		  border-left:solid;
+		  border-color:black;
+		}
+		td:nth-child(3n) {
+		  border-right:solid;
+		  border-color:black;
+		}
+		tr:first-child {
+		  border-top:solid;
+		  border-color:black;
+		}
+		tr:nth-child(3n) td {
+		  border-bottom:solid;
+		  border-color:black;
+		}
+
+		.button-style {
+		  position:relative;
+		  margin: auto;
+		  display: inline-block;
+		  color: blue;
+		  background-color: grey;
+		  font-size: 20px;
+		  padding: 16px 16px;
+		  border-radius: 12px;
+		  border: 2px solid black;
+		  box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+		  cursor: pointer;
+		}
+
+		.button-style:hover {
+		  background-color: darkgray
+		}
+
+		.buttonDiv {
+		  text-align: center;
+		}
+
+		.result-container {
+		  width: 400px;
+		  padding-top: 12px;
+		  padding-bottom: 12px;
+		  margin-bottom: 12px;
+		  cursor: pointer;
+		  font-size: 22px;
+		  border-radius: 12px;
+		  border: 2px solid lightgrey;
+		  margin: auto;
+		  background-color: coral;
+		  display: none;
+		  text-align: center;
+		  font-family: sans-serif;
+		}
+
+	  </style>
+	</head>
+
+	<script>
+	  	console.log("started");
+	    numberArray =  [[],[],[],[],[],[],[],[],[]];
+	    noSolFlag = false;
+
+		//wait for numbers to be entered. Only accept single numbers.
+		$(document).ready(function(){
+			$("td").keydown(function(event) { //key press on cell.
+			    console.log(event.which);
+			    var enteredCode = event.which;
+			    if (enteredCode > 96 && enteredCode < 106){ //this is for numbers entered with numpad.
+			    	enteredCode = enteredCode - 48;
+			    }
+			    $(this).html(""); //empty cell.
+			    if(enteredCode > 48 && enteredCode < 58){
+			    	var data = $(this).attr('id'); //get cell where data has been entered.
+			    	var rowCord = parseInt(data.charAt(0));
+			    	var colCord = parseInt(data.charAt(1));
+			    	numberArray[rowCord][colCord]=parseInt(String.fromCharCode(enteredCode));//put entered value in JS array.
+			    	//console.log(numberArray.join("\n"));
+			    }   
+			    else{
+			    	var data = $(this).attr('id');
+			    	var rowCord = parseInt(data.charAt(0));
+			    	var colCord = parseInt(data.charAt(1));
+			    	numberArray[rowCord][colCord]=null;//remove value in JS array as the HTML cell is now empty.
+			    	event.preventDefault(); //a non-number has been entered. Do not accept input.
+			    }
+			});
+		});
+
+		//function to solve the puzzle
+		function solvePuzzle(){
+			noSolFlag = false; //no solution possible after basic checks.
+			solvedFlag = false;
+			if (basicCheck() == false){
+				$("#message").html("There is no solution to this puzzle.");
+				noSolFlag = true;
+				$("#message").show();
+			}
+			//check that every empty cell has at least one possible candidate number.
+			for (var i=0; i<9; i++){
+				for (var j=0; j<9; j++){
+					if (numberArray[i][j] == null){
+						var candNos = candidateNumbers(i,j);
+						if (candNos.length == 1){
+							numberArray[i][j] = candNos[0];
+						}
+						else if (candNos.length == 0){
+							$("#message").html("There is no solution to this puzzle.");
+							noSolFlag = true;
+							$("#message").show();
+						}
+					}
+				}
+			}
+			if(noSolFlag == false){
+				solvedFlag = 0;
+				recursiveSolver(0,0); //start recursive solver at the first square of the grid
+				displayMessage(); //display if a solution has been found.
+			}
+		}
+		//function to check for repetition of the same number in a row, column or 3*3 square.
+		function basicCheck(){
+			console.log("basicCheck");
+			for (var i = 0; i < 9; i++){
+				var temporaryArrayRow = []; //create temporary array for row i.
+				var temporaryArrayColumn = []; //create temporary array for column i.
+				var temporaryArraySquare = []; //create temporary array for 3*3 square corresponding to i.
+				var sR = parseInt(i/3)*3; //variables used to check 3*3 squares
+				var sC = (i%3)*3;
+				for (var j = 0; j <9; j++){
+					if (temporaryArrayRow.includes(numberArray[i][j])){
+						return false; //repetition found in row
+					}
+					else if (temporaryArrayColumn.includes(numberArray[j][i])){
+						return false; //repetition found in row
+					}
+					else if (temporaryArraySquare.includes(numberArray[(sR+parseInt(j/3))][(sC+parseInt(j%3))])){
+						return false; //repetition found in 3*3 square
+					}
+					//add number to appropriate temporary array to be compared to later numbers.
+					if (numberArray[i][j] != null){
+						temporaryArrayRow.push(numberArray[i][j]);
+					}
+					if (numberArray[j][i] != null){
+						temporaryArrayColumn.push(numberArray[j][i]);
+					}
+					if (numberArray[sR+parseInt(j/3)][sC+parseInt(j%3)] != null){
+						temporaryArraySquare.push(numberArray[sR+parseInt(j/3)][sC+parseInt(j%3)]);
+					}
+				}
+			}
+		}
+		//function to solve puzzle recursively
+		function recursiveSolver(i,j){
+			if (j==9){ //if j equals 9 then the solver has finished the puzzle.
+				console.log("solution found");
+				displaySolution();
+				solvedFlag = true; //signifies a solution.
+				return;
+			}
+			else if (numberArray[i][j] != null){ //move to the next empty cell.
+				if(i==8){
+					recursiveSolver(0,j+1);
+				}
+				else{
+					recursiveSolver(i+1,j);
+				}
+			}
+			else {
+				var tempList = candidateNumbers(i,j); //create list of candidate numbers.
+				for(var k = 0; k < tempList.length; k++){
+					if(solvedFlag==true){ //exit recursion if a solution has been found.
+						return;
+					}
+					numberArray[i][j] = tempList[k];
+					if(i==8){
+						recursiveSolver(0,j+1);
+					}
+					else{
+						recursiveSolver(i+1,j);
+					}
+				}
+				numberArray[i][j]=null; //reset cell back to null as all candidate numbers have been tried
+			}
+			return; //move back to previous recursion.
+
+		}
+
+		//function to return possible candidate numbers for a given coordinate.
+		function candidateNumbers(r,c){
+			var excludedNos = []; //a list of impossible numbers to be excluded from the answer.
+			var returnArray = []; //candidate numbers.
+			excludedNos = excludedNos.concat(numberArray[r]); //exclude numbers on the same row.
+			for (var i=0; i<9; i++){
+				if (numberArray[i][c] != null){
+					excludedNos.push(numberArray[i][c]); //exclude numbers on the same column
+				}
+			}
+			var x = parseInt(r/3)*3;
+			var y = parseInt(c/3)*3;
+			for (var i=x; i<x+3; i++){
+				for (var j=y; j<y+3; j++){
+					if (numberArray[i][j] != null){
+						excludedNos.push(numberArray[i][j]); //exclude numbers in the same 3*3 region
+					}
+				}
+			}
+
+			for (var i=1; i<10; i++){
+				if (excludedNos.includes(i) == false){
+					returnArray.push(i); //add numbers to candidate list that haven't been excluded.
+				}
+			}
+			return returnArray;
+		}
+		//function to display answer to user.
+		function displaySolution(){
+			for(var i=0; i<9; i++){
+				for(var j=0; j<9; j++){
+					var cellid = i.toString()+j.toString(); //create cell ID
+					if($("#"+cellid).html()==''){ //check if cell is empty.
+						if(numberArray[i][j]!=null){ //check if an answer has been calculated.
+							$("#"+cellid).html(numberArray[i][j]); //add calculated value to empty cell.
+							$("#"+cellid).css('color', 'blue'); //calculated values displayed as blue.
+						}
+					}
+				}
+			}
+		}
+
+		//function display a message based on the number of solutions possible.
+		function displayMessage(){
+			if(solvedFlag==true){
+				$("#message").html("A solution has been found.");
+				$("#message").css("background-color", "greenyellow");
+			}
+			else if(solvedFlag==false){
+				$("#message").html("There is no solution to this puzzle.");
+				$("#message").css("background-color", "coral");
+			}
+			$("#message").show();
+		}
+		function restart(){
+			console.log("restart");
+			numberArray =  [[],[],[],[],[],[],[],[],[]]; //empty number array.
+			for(var i=0; i<9; i++){
+				for(var j=0; j<9; j++){
+					var cellid = i.toString()+j.toString(); //create cell ID
+					$("#"+cellid).html(null); //empty cell.
+					$("#"+cellid).css('color', 'black'); //color set beck to black.
+					$("#message").html(""); //reset message
+					$("#message").hide(); //hide message container
+					$("#message").css("background-color", "coral"); //reset message color
+				}
+			}
+		}
+
+</script>
+<body>
+  <h1>Sudoku Solver</h1>
+  
+  <table id="tableID">
+  <tr>
+    <td contenteditable="true" id="00"></td>
+    <td contenteditable="true" id="01"></td>
+    <td contenteditable="true" id="02"></td>
+    <td contenteditable="true" id="03"></td>
+    <td contenteditable="true" id="04"></td>
+    <td contenteditable="true" id="05"></td>
+    <td contenteditable="true" id="06"></td>
+    <td contenteditable="true" id="07"></td>
+    <td contenteditable="true" id="08"></td>
+  </tr>
+  <tr>
+	<td contenteditable="true" id="10"></td>
+    <td contenteditable="true" id="11"></td>
+    <td contenteditable="true" id="12"></td>
+    <td contenteditable="true" id="13"></td>
+    <td contenteditable="true" id="14"></td>
+    <td contenteditable="true" id="15"></td>
+    <td contenteditable="true" id="16"></td>
+    <td contenteditable="true" id="17"></td>
+    <td contenteditable="true" id="18"></td>
+  </tr>
+  <tr>
+	<td contenteditable="true" id="20"></td>
+    <td contenteditable="true" id="21"></td>
+    <td contenteditable="true" id="22"></td>
+    <td contenteditable="true" id="23"></td>
+    <td contenteditable="true" id="24"></td>
+    <td contenteditable="true" id="25"></td>
+    <td contenteditable="true" id="26"></td>
+    <td contenteditable="true" id="27"></td>
+    <td contenteditable="true" id="28"></td>
+  </tr>
+  <tr>
+    <td contenteditable="true" id="30"></td>
+    <td contenteditable="true" id="31"></td>
+    <td contenteditable="true" id="32"></td>
+    <td contenteditable="true" id="33"></td>
+    <td contenteditable="true" id="34"></td>
+    <td contenteditable="true" id="35"></td>
+    <td contenteditable="true" id="36"></td>
+    <td contenteditable="true" id="37"></td>
+    <td contenteditable="true" id="38"></td>
+  </tr>
+  <tr>
+    <td contenteditable="true" id="40"></td>
+    <td contenteditable="true" id="41"></td>
+    <td contenteditable="true" id="42"></td>
+    <td contenteditable="true" id="43"></td>
+    <td contenteditable="true" id="44"></td>
+    <td contenteditable="true" id="45"></td>
+    <td contenteditable="true" id="46"></td>
+    <td contenteditable="true" id="47"></td>
+    <td contenteditable="true" id="48"></td>
+  </tr>
+  <tr>
+    <td contenteditable="true" id="50"></td>
+    <td contenteditable="true" id="51"></td>
+    <td contenteditable="true" id="52"></td>
+    <td contenteditable="true" id="53"></td>
+    <td contenteditable="true" id="54"></td>
+    <td contenteditable="true" id="55"></td>
+    <td contenteditable="true" id="56"></td>
+    <td contenteditable="true" id="57"></td>
+    <td contenteditable="true" id="58"></td>
+  </tr>
+  <tr>
+    <td contenteditable="true" id="60"></td>
+    <td contenteditable="true" id="61"></td>
+    <td contenteditable="true" id="62"></td>
+    <td contenteditable="true" id="63"></td>
+    <td contenteditable="true" id="64"></td>
+    <td contenteditable="true" id="65"></td>
+    <td contenteditable="true" id="66"></td>
+    <td contenteditable="true" id="67"></td>
+    <td contenteditable="true" id="68"></td>
+  </tr>
+  <tr>
+    <td contenteditable="true" id="70"></td>
+    <td contenteditable="true" id="71"></td>
+    <td contenteditable="true" id="72"></td>
+    <td contenteditable="true" id="73"></td>
+    <td contenteditable="true" id="74"></td>
+    <td contenteditable="true" id="75"></td>
+    <td contenteditable="true" id="76"></td>
+    <td contenteditable="true" id="77"></td>
+    <td contenteditable="true" id="78"></td>
+  </tr>
+  <tr>
+    <td contenteditable="true" id="80"></td>
+    <td contenteditable="true" id="81"></td>
+    <td contenteditable="true" id="82"></td>
+    <td contenteditable="true" id="83"></td>
+    <td contenteditable="true" id="84"></td>
+    <td contenteditable="true" id="85"></td>
+    <td contenteditable="true" id="86"></td>
+    <td contenteditable="true" id="87"></td>
+    <td contenteditable="true" id="88"></td>
+</table>
+<div class="buttonDiv">
+  <span>
+    <button class="button-style" onclick="solvePuzzle();">Solve</button>
+    <button class="button-style" onclick="restart();">Restart</button>
+  </span>
+</div><br>
+<div class="result-container" id="message"></div>
+</body>
+</html>
